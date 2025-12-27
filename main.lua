@@ -119,7 +119,7 @@ local LocalPlayer = Players.LocalPlayer
 local MapsFolder = workspace:WaitForChild("Maps")
 local SelectedIsland
 
-local function getIslands()
+local function getIslands()nds()
     local islands = {}
     for _, island in ipairs(MapsFolder:GetChildren()) do
         if island:IsA("Model") then
@@ -175,9 +175,67 @@ local Tab = Window:Tab({
     Icon = "optional", -- optional
     Locked = false,
 })
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
+local CharactersFolder = workspace:WaitForChild("Main"):WaitForChild("Characters")
 
+local SelectedIsland
+local SelectedMonster
+local SelectedIndex
+local HeightOffset = 70 -- ค่าเริ่มต้นจาก Slider
 
+local followConn
 
+-- ===== Slider ปรับความสูง =====
+local Slider = Tab:Slider({
+    Title = "TP Height",
+    Desc = "ปรับระยะเหนือหัวมอน",
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 120,
+        Default = 70,
+    },
+    Callback = function(value)
+        HeightOffset = value
+    end
+})
 
+-- ===== ปุ่มเริ่ม/หยุดการตาม =====
+local FollowToggle = Tab:Toggle({
+    Title = "Follow Monster",
+    Desc = "TP ค้างไว้บนหัวมอน + หันหน้าลง",
+    Icon = "bird",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(state)
+        if state then
+            if followConn then followConn:Disconnect() end
+            followConn = RunService.Heartbeat:Connect(function()
+                if not (SelectedIsland and SelectedMonster and SelectedIndex) then return end
 
+                local island = CharactersFolder:FindFirstChild(SelectedIsland)
+                local monFolder = island and island:FindFirstChild(SelectedMonster)
+                local part = monFolder and monFolder:FindFirstChild(SelectedIndex)
+
+                if part and part:IsA("BasePart") then
+                    local char = LocalPlayer.Character
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local targetPos = part.Position + Vector3.new(0, HeightOffset, 0)
+                        -- หันหน้าลงไปหามอน
+                        hrp.CFrame = CFrame.new(targetPos, part.Position)
+                    end
+                end
+            end)
+        else
+            if followConn then
+                followConn:Disconnect()
+                followConn = nil
+            end
+        end
+    end
+})
