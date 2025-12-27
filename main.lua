@@ -140,6 +140,7 @@ local Dropdown = Tab:Dropdown({
     Callback = function(option)
         SelectedIsland = option
     end
+})nd
 })
 
 local Button = Tab:Button({
@@ -175,7 +176,119 @@ local Tab = Window:Tab({
     Icon = "optional", -- optional
     Locked = false,
 })
+-- servicesvices
 -- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local CharactersFolder = workspace:WaitForChild("Main"):WaitForChild("Characters")
+
+local SelectedIsland
+local SelectedMonster
+local SelectedIndex
+
+-- ดึงรายชื่อเกาะ
+local function getIslands()
+    local list = {}
+    for _, island in ipairs(CharactersFolder:GetChildren()) do
+        table.insert(list, island.Name)
+    end
+    return list
+end
+
+-- ดึงชื่อมอนในเกาะ
+local function getMonsters(islandName)
+    local list = {}
+    local island = CharactersFolder:FindFirstChild(islandName)
+    if island then
+        for _, mon in ipairs(island:GetChildren()) do
+            table.insert(list, mon.Name)
+        end
+    end
+    return list
+end
+
+-- ดึงเลขตัวมอน (1-5)
+local function getIndexes(islandName, monName)
+    local list = {}
+    local island = CharactersFolder:FindFirstChild(islandName)
+    local mon = island and island:FindFirstChild(monName)
+    if mon then
+        for _, p in ipairs(mon:GetChildren()) do
+            if p:IsA("BasePart") then
+                table.insert(list, p.Name)
+            end
+        end
+    end
+    table.sort(list)
+    return list
+end
+
+-- Dropdown เกาะ
+local islandList = getIslands()
+SelectedIsland = islandList[1]
+
+local IslandDropdown = Tab:Dropdown({
+    Title = "Select Island",
+    Desc = "เลือกเกาะ",
+    Values = islandList,
+    Value = islandList[1],
+    Callback = function(opt)
+        SelectedIsland = opt
+        local mons = getMonsters(opt)
+        SelectedMonster = mons[1]
+        MonsterDropdown:Refresh(mons, true)
+    end
+})
+
+-- Dropdown มอน
+local MonsterDropdown
+MonsterDropdown = Tab:Dropdown({
+    Title = "Select Monster",
+    Desc = "เลือกชื่อมอน",
+    Values = {},
+    Value = nil,
+    Callback = function(opt)
+        SelectedMonster = opt
+        local idx = getIndexes(SelectedIsland, opt)
+        SelectedIndex = idx[1]
+        IndexDropdown:Refresh(idx, true)
+    end
+})
+
+-- Dropdown เลขตัว (1-5)
+local IndexDropdown
+IndexDropdown = Tab:Dropdown({
+    Title = "Select Index",
+    Desc = "เลือกตัวที่ (1-5)",
+    Values = {},
+    Value = nil,
+    Callback = function(opt)
+        SelectedIndex = opt
+    end
+})
+
+-- ปุ่ม TP
+local Button = Tab:Button({
+    Title = "TP to Monster",
+    Desc = "วาปไปบนหัวมอนที่เลือก",
+    Locked = false,
+    Callback = function()
+        if not (SelectedIsland and SelectedMonster and SelectedIndex) then return end
+
+        local island = CharactersFolder:FindFirstChild(SelectedIsland)
+        local monFolder = island and island:FindFirstChild(SelectedMonster)
+        local part = monFolder and monFolder:FindFirstChild(SelectedIndex)
+
+        if part and part:IsA("BasePart") then
+            local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            hrp.CFrame = part.CFrame + Vector3.new(0, 5, 0) -- อยู่เหนือหัว
+        else
+            warn("ไม่พบมอนตามที่เลือก")
+        end
+    end
+})
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -214,8 +327,7 @@ local FollowToggle = Tab:Toggle({
     Callback = function(state)
         if state then
             if followConn then followConn:Disconnect() end
-            followConn = RunService.Heartbeat:Connect(function()
-                if not (SelectedIsland and SelectedMonster and SelectedIndex) then return end
+            followConn = RunService.Heartbeat:Connect(functi                if not (SelectedIsland and SelectedMonster and SelectedIndex) then return end
 
                 local island = CharactersFolder:FindFirstChild(SelectedIsland)
                 local monFolder = island and island:FindFirstChild(SelectedMonster)
